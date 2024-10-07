@@ -1,3 +1,5 @@
+### For building instructions see [BUILD.md](BUILD.md)
+
 # SurfaceVoronoi
 Code of SIGGRAPH Asia 2022 Paper SurfaceVoronoi: Efficiently Computing Voronoi Diagrams over Mesh Surfaces with Arbitrary Distance Solvers.
 
