@@ -2,6 +2,7 @@
 #pragma comment(lib, "libgmp-10.lib")
 #include "GVD_RVD.hpp"
 #include<vector>
+#include <iostream>
 using namespace std;
 using namespace GVD;
 
@@ -34,6 +35,8 @@ void EDBVDExample() {
 
 	vector<tuple<double, double, double, int>> sources;
 
+	// source points are the first vertex of every (# faces / 1000) face
+	// - also storing the face id as the (source id?)
 	int ApproSitesNum = 1000;
 	for (int fid = 0; fid < model.GetNumOfFaces(); ++fid) {
 		if(fid%(model.GetNumOfFaces()/ ApproSitesNum)==0)
@@ -41,7 +44,10 @@ void EDBVDExample() {
 	}
 
 	double t = GetTickCount64();
+
+	// Bisectors = vector of  3D positions pairs (ie lines)
 	auto res2 = GetLRVD_Bisectors(model, sources);
+	
 	t = GetTickCount64() - t;
 	cerr << "EDBVD total time: " << t / 1000.0 << "  seconds..." << endl;
 	WriteLineObjFile(res2.first, "EDBVD_rersult.obj");
@@ -49,7 +55,12 @@ void EDBVDExample() {
 }
 
 int main() {
-	GvdExample();
+	std::cout << "Hello World! 3" << std::endl;
+
+	// Geodesic Voronoi Diagram
+	//GvdExample();
+
+	// Euclidean Distance based Voronoi Diagram
 	EDBVDExample();
 
 	return 0;

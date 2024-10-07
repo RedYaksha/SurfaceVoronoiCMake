@@ -6,10 +6,10 @@
 using namespace std;
 
 #if defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\lib\\Debug\\Model3D.lib")
+//#pragma comment(lib, "..\\lib\\Debug\\Model3D.lib")
 #endif
 #if !defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\lib\\Release\\Model3D.lib")
+//#pragma comment(lib, "..\\lib\\Release\\Model3D.lib")
 #endif
 
 using namespace Model3D;

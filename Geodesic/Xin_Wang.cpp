@@ -2,10 +2,12 @@
 //
 //////////////////////////////////////////////////////////////////////
 #if defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\x64\\Debug\\Model3D.lib")
+// rp
+//#pragma comment(lib, "..\\x64\\Debug\\Model3D.lib")
 #endif
 #if !defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\x64\\Release\\Model3D.lib")
+// rp
+//#pragma comment(lib, "..\\x64\\Release\\Model3D.lib")
 #endif
 #include "Xin_Wang.h"
 #include <iostream>

@@ -1,7 +1,9 @@
 #include "DistanceApproach.h"
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <iostream>
 using namespace std;
+
 namespace Geodesic
 {
 	using namespace Model3D;

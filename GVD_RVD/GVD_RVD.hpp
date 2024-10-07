@@ -39,18 +39,22 @@ using namespace std;
 
 #include "..\\Geodesic\Xin_Wang.h"
 #if defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\lib\\Debug\\Geodesic.lib")
+// rp
+//#pragma comment(lib, "..\\lib\\Debug\\Geodesic.lib")
 #endif
 #if !defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\lib\\Release\\Geodesic.lib")
+// rp
+//#pragma comment(lib, "..\\lib\\Release\\Geodesic.lib")
 #endif
 
 #include "..\\Model3D\RichModel.h"
 #if defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\Debug\\lib\\Model3D.lib")
+// rp
+//#pragma comment(lib, "..\\Debug\\lib\\Model3D.lib")
 #endif
 #if !defined(_DEBUG) && defined(_WIN64)
-#pragma comment(lib, "..\\Release\\lib\\Model3D.lib")
+// rp
+//#pragma comment(lib, "..\\Release\\lib\\Model3D.lib")
 #endif
 
 #include <Eigen/dense>
@@ -205,8 +209,12 @@ namespace GVD
 #endif
 		vector<vector<tuple<int, double, double, double>>> m_distances(model.GetNumOfFaces());
 		//int _for_ = 0;
+
+		int ind = 0;
 		for (auto source : sources)
 		{
+			std::cout << "Source: " << ind++ << " / " <<  sources.size() << std::endl;
+			
 			/*cout << ++_for_ << endl;*/
 			set<int> single_source;
 			single_source.insert(source);
@@ -253,9 +261,11 @@ namespace GVD
 
 	vector<vector<tuple<int, double, double, double>>> InferOverPropagatedDistancesForLRVD(const Model3D::CRichModel& model, const vector<tuple<double, double, double, int>>& sources)
 	{
+		// Localized Restricted Voronoi Diagram
 
+		// we're returning this.
+		// This vector maps triangle -> vector of sources and corresponding distances to each face's vertex
 		vector<vector<tuple<int, double, double, double>>> m_distances(model.GetNumOfFaces());
-
 
 		vector<tuple<int, double, double, double>> bestDistances(model.GetNumOfFaces(), make_tuple(-1, DBL_MAX, DBL_MAX, DBL_MAX));
 
@@ -270,6 +280,8 @@ namespace GVD
 			int toWhichFace;
 
 			double d1, d2, d3;
+
+			
 			const bool operator>(const Evt& other) const
 			{
 				return d1 + d2 + d3 > other.d1 + other.d2 + other.d3;
@@ -289,17 +301,23 @@ namespace GVD
 		for (int i = 0; i < sources.size(); ++i)
 		{
 			//������ü���Ϳ���
+
+			// The initial events are source <==> triangle,
+			// but since the sources here are stemming from the faces themselves, (likely for the sake of simplicity)
+			// .toWhichFace is just set to the 4th component in the input parameter
 			evt.whichSource = i;
 			evt.toWhichFace = get<3>(sources[evt.whichSource]);
 			auto sourcePos = Model3D::CPoint3D(get<0>(sources[i]), get<1>(sources[i]), get<2>(sources[i]));
 
+			// dX is the distance from source to each vertex of the triangle
 			evt.d1 = (sourcePos - model.Vert(model.Face(evt.toWhichFace)[0])).Len();
 			evt.d2 = (sourcePos - model.Vert(model.Face(evt.toWhichFace)[1])).Len();
 			evt.d3 = (sourcePos - model.Vert(model.Face(evt.toWhichFace)[2])).Len();
 
-
 			pending.push(evt);
 			//considered.insert(make_pair(evt.whichSource, evt.toWhichFace));
+
+			// 
 			considered[evt.whichSource].insert(evt.toWhichFace);
 		}
 
@@ -313,8 +331,10 @@ namespace GVD
 		{
 			Evt& evt = pending.front();
 
+			
 			if (evt.GetAverageDistance() > Average(bestDistances[evt.toWhichFace]))
 			{
+				// if source can contribute to at least 1 vertex of the triangle
 				if (evt.d1 < get<1>(bestDistances[evt.toWhichFace])
 					|| evt.d2 < get<2>(bestDistances[evt.toWhichFace])
 					|| evt.d3 < get<3>(bestDistances[evt.toWhichFace]))
@@ -322,16 +342,20 @@ namespace GVD
 					m_distances[evt.toWhichFace].emplace_back(evt.whichSource, evt.d1, evt.d2, evt.d3);
 				}
 				else {
+					// source can't contribute anymore
 					pending.pop();
 					continue;
 				}
 			}
+			// source avg distance to all vertices is better than the best found so far, so this
+			// source becomes the best for this triangle
 			else
 			{
 				bestDistances[evt.toWhichFace] = make_tuple(evt.whichSource, evt.d1, evt.d2, evt.d3);
 				m_distances[evt.toWhichFace].emplace_back(evt.whichSource, evt.d1, evt.d2, evt.d3);
 			}
 
+			// get the 3 neighbors of the current face
 			const int firstEdge = model.GetEdgeIndexFromTwoVertices(model.Face(evt.toWhichFace)[0], model.Face(evt.toWhichFace)[1]);
 			threeNeighboringFaces[0] = model.Edge(model.Edge(firstEdge).indexOfReverseEdge).indexOfFrontFace;
 			threeNeighboringFaces[1] = model.Edge(model.Edge(firstEdge).indexOfLeftEdge).indexOfFrontFace;
@@ -344,13 +368,20 @@ namespace GVD
 
 			for (int i = 0; i < 3; ++i)
 			{
+				// if this source is already considering this neighboring face or
+				// the neighbor face is invalid - continue.
 				if (considered[evt.whichSource].find(threeNeighboringFaces[i]) != considered[evt.whichSource].end() || threeNeighboringFaces[i] == -1)
 					continue;
+
+				// add source <==> neighbor face
 				evt.toWhichFace = threeNeighboringFaces[i];
 				evt.d1 = (sourcePos - model.Vert(model.Face(evt.toWhichFace)[0])).Len();
 				evt.d2 = (sourcePos - model.Vert(model.Face(evt.toWhichFace)[1])).Len();
 				evt.d3 = (sourcePos - model.Vert(model.Face(evt.toWhichFace)[2])).Len();
 				pending.push(evt);
+
+				// it seems considered is: has this source ever considered a triangle before
+				// ... so sources don't re-calculate with a triangle if it has already
 				considered[evt.whichSource].insert(evt.toWhichFace);
 			}
 			pending.pop();
@@ -673,34 +704,34 @@ namespace GVD
 			v.x = x1;
 			v.y = y1;
 			v.h = maxHeight;
-			v.facet1 = 2;
-			v.facet2 = 0;
-			v.facet3 = 3;
+			v.facet1 = 2; // third wall
+			v.facet2 = 0; // first wall
+			v.facet3 = 3; // top (maxHeight) facet
 			vertexPool.push_back(v);
 			survivingVertices.insert(vertexPool.size() - 1);
 			v.x = x2;
 			v.y = y2;
 			v.h = maxHeight;
-			v.facet1 = 0;
-			v.facet2 = 1;
-			v.facet3 = 3;
+			v.facet1 = 0; // first wall
+			v.facet2 = 1; // second wall
+			v.facet3 = 3; // top
 			vertexPool.push_back(v);
 			survivingVertices.insert(vertexPool.size() - 1);
 			v.x = x3;
 			v.y = y3;
 			v.h = maxHeight;
-			v.facet1 = 1;
-			v.facet2 = 2;
-			v.facet3 = 3;
+			v.facet1 = 1; // second wall
+			v.facet2 = 2; // third wall
+			v.facet3 = 3; // top
 			vertexPool.push_back(v);
 			survivingVertices.insert(vertexPool.size() - 1);
 
 			v.x = x1;
 			v.y = y1;
 			v.h = -maxHeight;
-			v.facet1 = 2;
-			v.facet2 = 0;
-			v.facet3 = -1;
+			v.facet1 = 2; // third wall
+			v.facet2 = 0; // first wall
+			v.facet3 = -1; // ??? (special case to be bottom?)
 			vertexPool.push_back(v);
 			survivingVertices.insert(vertexPool.size() - 1);
 			v.x = x2;
@@ -720,6 +751,8 @@ namespace GVD
 			vertexPool.push_back(v);
 			survivingVertices.insert(vertexPool.size() - 1);
 
+			// does this skip over the bottom triangle basee edges? since
+			// they're not needed for calculations?
 			MyEdge edge;
 			edge.vertex1 = 0;
 			edge.vertex2 = 1;
@@ -888,6 +921,7 @@ namespace GVD
 			set<int> uselessVertexIDs;
 			for (auto v : survivingVertices)
 			{
+				// if a vertex is above the new face - discard them
 				auto v_pos = vertexPool[v];
 				if (facet_new.OnUpperSide(v_pos.x, v_pos.y, v_pos.h))
 					uselessVertexIDs.insert(v);
@@ -907,12 +941,20 @@ namespace GVD
 			for (auto eID : survivingEdges)
 			{
 				//��ǰ��������Ҵ�
+
+				// edge's first vertex still lives
 				bool flag1 = (survivingVertices.find(edgePool[eID].vertex1) != survivingVertices.end());
+				
+				// edge's second vertex still lives
 				bool flag2 = (survivingVertices.find(edgePool[eID].vertex2) != survivingVertices.end());
+
+				// nothing to do
 				if (flag1 && flag2)
 					continue;
 
 				//ֻ��һ�����Ҵ�
+				// second died. update the end to this edge and add a new
+				// one which
 				if (flag1 && !flag2)
 				{
 
@@ -1292,7 +1334,11 @@ namespace GVD
 
 		double t = GetTickCount64();
 		cout << "infer start" << endl;
+
+		// resultingField is triangle => list of source positions along with distances to each vertex of triangle
+		// resultingField[triangle index] = <source id, distance from source to vertex 1, d2, d3>
 		auto resultingField = InferOverPropagatedDistancesForLRVD(model, sources);
+		
 		t = GetTickCount64() - t;
 		double infer = t / 1000.0;
 		cerr << "InferOverPropagatedDistancesForLRVD time: " << t / 1000.0 << "  seconds..." << endl;
@@ -1307,9 +1353,13 @@ namespace GVD
 			{
 				continue;
 			}
+			
 			Triangle_Base_Convex_Top tble(model, faceID);
 			for (int j = 0; j < resultingField[faceID].size(); ++j)
 			{
+
+				// uses MyFacet(const Triangle_Base_Convex_Top* tble, double h1, double h2, double h3, int ancestor)
+				// constructor. Storing the squared heights into the facet
 				Triangle_Base_Convex_Top::MyFacet facet(&tble, get<1>(resultingField[faceID][j]) * get<1>(resultingField[faceID][j]),
 					get<2>(resultingField[faceID][j]) * get<2>(resultingField[faceID][j]),
 					get<3>(resultingField[faceID][j]) * get<3>(resultingField[faceID][j]),
